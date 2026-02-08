@@ -125,6 +125,26 @@ router.get('/public', campaignController.getPublicCampaigns);
 
 /**
  * @swagger
+ * /api/campaigns/public/{id}:
+ *   get:
+ *     summary: Get public campaign by ID (no auth required)
+ *     tags: [Campaigns]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Campaign details
+ *       404:
+ *         description: Campaign not found
+ */
+router.get('/public/:id', param('id').isInt(), campaignController.getCampaignByIdPublic);
+
+/**
+ * @swagger
  * /api/campaigns/code/{code}:
  *   get:
  *     summary: Get campaign by code (for donation page, no auth)

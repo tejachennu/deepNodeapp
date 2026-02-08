@@ -361,6 +361,56 @@ const createUser = async (req, res) => {
     }
 };
 
+// Search user by phone number (for sponsor lookup)
+const searchUserByPhone = async (req, res) => {
+    try {
+        const { phone } = req.query;
+
+        if (!phone || phone.length < 10) {
+            return res.status(400).json({
+                success: false,
+                message: 'Please provide at least 10 digits'
+            });
+        }
+
+        const user = await queryOne(
+            `SELECT u.UserId, u.FullName, u.Email, u.MobileNumber, u.Username,
+                    o.OrganizationName, o.OrganizationId
+             FROM users u 
+             LEFT JOIN organizations o ON u.OrganizationId = o.OrganizationId
+             WHERE u.MobileNumber = ? AND u.Status = 'Active'`,
+            [phone]
+        );
+
+        if (!user) {
+            return res.json({
+                success: true,
+                found: false,
+                data: null
+            });
+        }
+
+        res.json({
+            success: true,
+            found: true,
+            data: {
+                userId: user.UserId,
+                fullName: user.FullName,
+                email: user.Email,
+                mobileNumber: user.MobileNumber,
+                organizationName: user.OrganizationName,
+                organizationId: user.OrganizationId
+            }
+        });
+    } catch (error) {
+        console.error('Search user by phone error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to search user.'
+        });
+    }
+};
+
 module.exports = {
     getAllUsers,
     getUserById,
@@ -369,5 +419,6 @@ module.exports = {
     assignOrganization,
     updateProfile,
     changePassword,
-    createUser
+    createUser,
+    searchUserByPhone
 };

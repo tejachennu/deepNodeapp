@@ -103,6 +103,33 @@ exports.getCampaignById = async (req, res) => {
     }
 };
 
+// Get campaign by ID - public (no auth required)
+exports.getCampaignByIdPublic = async (req, res) => {
+    try {
+        const campaign = await Campaign.findById(req.params.id);
+
+        if (!campaign) {
+            return res.status(404).json({ success: false, message: 'Campaign not found' });
+        }
+
+        // Only return public campaigns
+        if (!campaign.IsPublic) {
+            return res.status(404).json({ success: false, message: 'Campaign not found' });
+        }
+
+        // Get statistics
+        const stats = await Campaign.getStats(req.params.id);
+
+        res.json({
+            success: true,
+            data: { campaign, stats }
+        });
+    } catch (error) {
+        console.error('Get public campaign error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch campaign' });
+    }
+};
+
 // Get campaign by code (public - no auth required)
 exports.getCampaignByCode = async (req, res) => {
     try {

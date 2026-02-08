@@ -1,14 +1,15 @@
 // Role-based access control utilities
-export type RoleCode = 'SUPER_ADMIN' | 'ADMIN' | 'ORG_ADMIN' | 'STAFF' | 'VOLUNTEER' | 'SPONSOR';
+export type RoleCode = 'SUPER_ADMIN' | 'ADMIN' | 'ORG_ADMIN' | 'STAFF' | 'VOLUNTEER' | 'SPONSOR' | 'USER';
 
 // Define permissions for each role
 export const ROLE_PERMISSIONS: Record<RoleCode, string[]> = {
     SUPER_ADMIN: ['*'], // Full access
     ADMIN: ['*'],       // Full access
-    ORG_ADMIN: ['projects.view', 'donations.self', 'profile'],
+    ORG_ADMIN: ['projects.view', 'campaigns.view', 'donations.self', 'profile'],
     STAFF: ['projects.view', 'camps.view', 'campaigns.view', 'profile'],
     VOLUNTEER: ['projects.view', 'campaigns.view', 'profile'],
-    SPONSOR: ['projects.view', 'donations.self', 'profile'],
+    SPONSOR: ['projects.view', 'campaigns.view', 'donations.self', 'profile'],
+    USER: ['projects.view', 'campaigns.view', 'donations.self', 'profile'], // Regular user access
 };
 
 // Check if role has a specific permission

@@ -13,6 +13,27 @@ router.use(authenticate);
 
 /**
  * @swagger
+ * /api/users/search-by-phone:
+ *   get:
+ *     summary: Search user by phone number (for sponsor form auto-fill)
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: phone
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: 10+ digit phone number
+ *     responses:
+ *       200:
+ *         description: User found or not found
+ */
+router.get('/search-by-phone', userController.searchUserByPhone);
+
+/**
+ * @swagger
  * /api/users:
  *   get:
  *     summary: Get all users (paginated)

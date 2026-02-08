@@ -67,9 +67,9 @@ export const campaignService = {
         return response.data.data?.campaigns || [];
     },
 
-    // Get campaign by ID
+    // Get campaign by ID (public endpoint - no auth required)
     async getById(id: number): Promise<Campaign> {
-        const response = await api.get(`/campaigns/${id}`);
+        const response = await api.get(`/campaigns/public/${id}`);
         return response.data.data?.campaign;
     },
 

@@ -5,56 +5,93 @@ export interface Project {
     ProjectId: number;
     ProjectName: string;
     ProjectCode: string;
+    ProjectTitle?: string;
+    ProjectDescription?: string;
     ShortDescription?: string;
     LongDescription?: string;
+    Objective?: string;
     ProjectType?: string;
     Location?: string;
+    Latitude?: number;
+    Longitude?: number;
     TargetAmount?: number;
     CollectedAmount?: number;
     StartDate?: string;
+    StartTime?: string;
     EndDate?: string;
+    EndTime?: string;
     Status: string;
     BannerImage?: string;
+    BannerUrl?: string;
     OrganizationName?: string;
+    CreatedByName?: string;
 }
 
 export interface Camp {
     CampId: number;
+    ProjectId: number;
     CampName: string;
     CampDescription?: string;
     CampType?: string;
     CampAddress?: string;
     CampState?: string;
     CampCity?: string;
+    CampCountry?: string;
     PeopleExpected?: number;
     PeopleAttended?: number;
     CampStartDate?: string;
     CampEndDate?: string;
     CampStatus: string;
+    Latitude?: number;
+    Longitude?: number;
     ImageCount?: number;
     VideoCount?: number;
 }
 
 export interface Sponsor {
     ProjectSponsorId: number;
+    ProjectId: number;
+    SponsorId?: number;
+    OrganizationId?: number;
     SponsorType: string;
     SponsorName?: string;
+    SponsorEmail?: string;
+    SponsorPhone?: string;
+    SponsorAddress?: string;
+    SponsorWebsite?: string;
     SponsorLogo?: string;
     Purpose?: string;
     SponsorshipType?: string;
     Amount?: number;
+    Currency?: string;
+    Description?: string;
+    StartDate?: string;
+    EndDate?: string;
     Status: string;
+    IsPublic?: boolean;
+    DisplayOrder?: number;
     OrganizationName?: string;
 }
 
 export interface ProjectSpend {
     SpendId: number;
-    SpendName: string;
+    ProjectId: number;
+    SpendName?: string;
+    ExpenseName?: string;
     SpendType?: string;
+    ExpenseType?: string;
     Amount: number;
     SpendDate?: string;
+    SpentDate?: string;
+    BillDate?: string;
     Status: string;
     VendorName?: string;
+    VendorPhone?: string;
+    PaymentMode?: string;
+    BillImageUrl?: string;
+    Notes?: string;
+    ApprovedBy?: number;
+    ApprovalDate?: string;
 }
 
 // Project Service
@@ -110,7 +147,20 @@ export const projectService = {
         return response.data.data;
     },
 
-    async createCamp(data: Partial<Camp> & { projectId: number }): Promise<Camp> {
+    async createCamp(data: {
+        projectId: number;
+        campName: string;
+        campDescription?: string;
+        campAddress?: string;
+        campCity?: string;
+        campState?: string;
+        campCountry?: string;
+        peopleExpected?: number;
+        campStartDate?: string;
+        campEndDate?: string;
+        latitude?: number;
+        longitude?: number;
+    }): Promise<Camp> {
         const response = await api.post('/camps', data);
         return response.data.data?.camp;
     },
@@ -131,21 +181,76 @@ export const projectService = {
         return response.data.data?.sponsors || [];
     },
 
-    async createSponsor(data: Partial<Sponsor> & { projectId: number }): Promise<Sponsor> {
+    async createSponsor(data: {
+        projectId: number;
+        sponsorType?: string;
+        sponsorId?: number;
+        organizationId?: number;
+        sponsorName?: string;
+        sponsorEmail?: string;
+        sponsorPhone?: string;
+        sponsorAddress?: string;
+        sponsorWebsite?: string;
+        purpose?: string;
+        sponsorshipType?: string;
+        amount?: number;
+        currency?: string;
+        description?: string;
+        startDate?: string;
+        endDate?: string;
+        status?: string;
+        isPublic?: boolean;
+    }): Promise<Sponsor> {
         const response = await api.post('/project-sponsors', data);
         return response.data.data?.sponsor;
     },
 
+    async updateSponsor(id: number, data: Partial<Sponsor>): Promise<Sponsor> {
+        const response = await api.put(`/project-sponsors/${id}`, data);
+        return response.data.data?.sponsor;
+    },
+
+    async deleteSponsor(id: number): Promise<void> {
+        await api.delete(`/project-sponsors/${id}`);
+    },
+
     // ==================== Spends ====================
     async getSpends(projectId: number): Promise<ProjectSpend[]> {
-        const response = await api.get(`/project-spends?projectId=${projectId}`);
+        const response = await api.get(`/project-spends/project/${projectId}`);
         return response.data.data?.spends || [];
     },
 
-    async createSpend(data: Partial<ProjectSpend> & { projectId: number }): Promise<ProjectSpend> {
+    async getSpendById(id: number): Promise<ProjectSpend> {
+        const response = await api.get(`/project-spends/${id}`);
+        return response.data.data?.spend;
+    },
+
+    async createSpend(data: {
+        projectId: number;
+        expenseName: string;
+        expenseType?: string;
+        amount: number;
+        vendorName?: string;
+        vendorPhone?: string;
+        paymentMode?: string;
+        billDate?: string;
+        spentDate?: string;
+        notes?: string;
+    }): Promise<ProjectSpend> {
         const response = await api.post('/project-spends', data);
         return response.data.data?.spend;
     },
-};
 
-export default projectService;
+    async updateSpend(id: number, data: Partial<ProjectSpend>): Promise<ProjectSpend> {
+        const response = await api.put(`/project-spends/${id}`, data);
+        return response.data.data?.spend;
+    },
+
+    async deleteSpend(id: number): Promise<void> {
+        await api.delete(`/project-spends/${id}`);
+    },
+
+    async approveSpend(id: number): Promise<void> {
+        await api.post(`/project-spends/${id}/approve`);
+    },
+};
