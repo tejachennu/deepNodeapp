@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const apiLogController = require('../controllers/apiLogController');
 const { authenticate } = require('../middleware/auth');
-const { requirePermission } = require('../middleware/rbac');
+const { requireRole } = require('../middleware/rbac');
 
 /**
  * @swagger
@@ -66,7 +66,7 @@ const { requirePermission } = require('../middleware/rbac');
  *       200:
  *         description: List of API logs
  */
-router.get('/', authenticate, requirePermission('SUPER_ADMIN', 'ADMIN'), apiLogController.getLogs);
+router.get('/', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), apiLogController.getLogs);
 
 /**
  * @swagger
@@ -91,7 +91,7 @@ router.get('/', authenticate, requirePermission('SUPER_ADMIN', 'ADMIN'), apiLogC
  *       200:
  *         description: API statistics
  */
-router.get('/stats', authenticate, requirePermission('SUPER_ADMIN', 'ADMIN'), apiLogController.getStats);
+router.get('/stats', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), apiLogController.getStats);
 
 /**
  * @swagger
@@ -112,7 +112,7 @@ router.get('/stats', authenticate, requirePermission('SUPER_ADMIN', 'ADMIN'), ap
  *       200:
  *         description: Cleanup result
  */
-router.delete('/cleanup', authenticate, requirePermission('SUPER_ADMIN'), apiLogController.cleanupLogs);
+router.delete('/cleanup', authenticate, requireRole('SUPER_ADMIN'), apiLogController.cleanupLogs);
 
 /**
  * @swagger
@@ -134,6 +134,6 @@ router.delete('/cleanup', authenticate, requirePermission('SUPER_ADMIN'), apiLog
  *       404:
  *         description: Log not found
  */
-router.get('/:id', authenticate, requirePermission('SUPER_ADMIN', 'ADMIN'), apiLogController.getLogById);
+router.get('/:id', authenticate, requireRole('SUPER_ADMIN', 'ADMIN'), apiLogController.getLogById);
 
 module.exports = router;
