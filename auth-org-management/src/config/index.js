@@ -12,7 +12,7 @@ module.exports = {
         queueLimit: 0
     },
     server: {
-        port: parseInt(process.env.PORT) || 3000,
+        port: parseInt(process.env.PORT) || 3001,
         nodeEnv: process.env.NODE_ENV || 'development'
     },
     jwt: {

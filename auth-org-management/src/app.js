@@ -4,6 +4,9 @@ const passport = require('./config/passport');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 
+// Import middleware
+const apiLogger = require('./middleware/apiLogger');
+
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -17,6 +20,7 @@ const donationRoutes = require('./routes/donationRoutes');
 const campRoutes = require('./routes/campRoutes');
 const beneficiaryDonationRoutes = require('./routes/beneficiaryDonationRoutes');
 const projectSponsorRoutes = require('./routes/projectSponsorRoutes');
+const apiLogRoutes = require('./routes/apiLogRoutes');
 
 const app = express();
 
@@ -27,6 +31,9 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// API Logger - logs all API requests
+app.use(apiLogger());
 
 // Serve uploaded files statically
 app.use('/uploads', express.static('uploads'));
@@ -69,6 +76,7 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/camps', campRoutes);
 app.use('/api/beneficiary-donations', beneficiaryDonationRoutes);
 app.use('/api/project-sponsors', projectSponsorRoutes);
+app.use('/api/logs', apiLogRoutes);
 
 // 404 handler
 app.use((req, res) => {
