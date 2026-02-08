@@ -62,11 +62,32 @@ export const authService = {
 
     // Login
     async login(credentials: LoginCredentials): Promise<AuthResponse> {
-        const response = await api.post('/auth/login', credentials);
-        if (response.data.success && response.data.data?.token) {
-            await this.storeAuthData(response.data.data.token, response.data.data.user);
+        console.log('🔐 LOGIN DEBUG:');
+        console.log('📍 API Base URL:', api.defaults.baseURL);
+        console.log('📧 Email:', credentials.email);
+        console.log('🔑 Password:', credentials.password ? '****' : 'empty');
+
+        try {
+            console.log('📤 Sending login request...');
+            const response = await api.post('/auth/login', credentials);
+            console.log('📥 Response status:', response.status);
+            console.log('📥 Response data:', JSON.stringify(response.data, null, 2));
+
+            if (response.data.success && response.data.data?.token) {
+                console.log('✅ Login successful, storing auth data...');
+                await this.storeAuthData(response.data.data.token, response.data.data.user);
+            } else {
+                console.log('❌ Login failed:', response.data.message);
+            }
+            return response.data;
+        } catch (error: any) {
+            console.log('❌ LOGIN ERROR:');
+            console.log('   Error message:', error.message);
+            console.log('   Error response:', error.response?.data);
+            console.log('   Error status:', error.response?.status);
+            console.log('   Full error:', JSON.stringify(error, null, 2));
+            throw error;
         }
-        return response.data;
     },
 
     // Get profile

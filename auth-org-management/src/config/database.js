@@ -66,10 +66,16 @@ const transaction = async (callback) => {
     }
 };
 
+// Execute function for direct pool access (for models using db.execute pattern)
+const execute = async (sql, params = []) => {
+    return pool.execute(sql, params);
+};
+
 module.exports = {
     pool,
     query,
     queryOne,
     transaction,
-    testConnection
+    testConnection,
+    execute
 };

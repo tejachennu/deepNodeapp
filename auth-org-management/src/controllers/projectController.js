@@ -31,7 +31,6 @@ exports.createProject = async (req, res) => {
 exports.getAllProjects = async (req, res) => {
     try {
         const filters = {
-            organizationId: req.query.organizationId,
             status: req.query.status,
             search: req.query.search,
             startDateFrom: req.query.startDateFrom,
@@ -40,11 +39,6 @@ exports.getAllProjects = async (req, res) => {
             limit: req.query.limit || 50,
             offset: req.query.offset || 0
         };
-
-        // If not admin, filter by user's organization
-        if (req.user.roleCode !== 'SUPER_ADMIN' && req.user.roleCode !== 'ADMIN') {
-            filters.organizationId = req.user.organizationId;
-        }
 
         const projects = await Project.findAll(filters);
 
@@ -70,13 +64,6 @@ exports.getProjectById = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Project not found' });
         }
 
-        // Check access for non-admins
-        if (req.user.roleCode !== 'SUPER_ADMIN' && req.user.roleCode !== 'ADMIN') {
-            if (project.OrganizationId !== req.user.organizationId) {
-                return res.status(403).json({ success: false, message: 'Access denied' });
-            }
-        }
-
         res.json({
             success: true,
             data: { project }
@@ -100,12 +87,7 @@ exports.updateProject = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Project not found' });
         }
 
-        // Check access for non-admins
-        if (req.user.roleCode !== 'SUPER_ADMIN' && req.user.roleCode !== 'ADMIN') {
-            if (project.OrganizationId !== req.user.organizationId) {
-                return res.status(403).json({ success: false, message: 'Access denied' });
-            }
-        }
+
 
         const updated = await Project.update(req.params.id, req.body, req.user.userId);
 
@@ -134,12 +116,7 @@ exports.deleteProject = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Project not found' });
         }
 
-        // Check access for non-admins
-        if (req.user.roleCode !== 'SUPER_ADMIN' && req.user.roleCode !== 'ADMIN') {
-            if (project.OrganizationId !== req.user.organizationId) {
-                return res.status(403).json({ success: false, message: 'Access denied' });
-            }
-        }
+
 
         await Project.delete(req.params.id, req.user.userId);
 
@@ -156,14 +133,7 @@ exports.deleteProject = async (req, res) => {
 // Get project statistics
 exports.getProjectStats = async (req, res) => {
     try {
-        let organizationId = req.query.organizationId;
-
-        // If not admin, use user's organization
-        if (req.user.roleCode !== 'SUPER_ADMIN' && req.user.roleCode !== 'ADMIN') {
-            organizationId = req.user.organizationId;
-        }
-
-        const stats = await Project.getStats(organizationId);
+        const stats = await Project.getStats();
 
         res.json({
             success: true,
