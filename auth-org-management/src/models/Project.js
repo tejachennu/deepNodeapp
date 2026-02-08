@@ -6,19 +6,19 @@ class Project {
         const {
             projectName, projectTitle, projectDescription, objective,
             bannerUrl, startDate, startTime, endDate, endTime,
-            location, latitude, longitude, status, organizationId, createdBy
+            location, latitude, longitude, status, createdBy
         } = projectData;
 
         const [result] = await db.execute(
             `INSERT INTO projects (
                 ProjectName, ProjectTitle, ProjectDescription, Objective,
                 BannerUrl, StartDate, StartTime, EndDate, EndTime,
-                Location, Latitude, Longitude, Status, OrganizationId, CreatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                Location, Latitude, Longitude, Status, CreatedBy
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 projectName, projectTitle, projectDescription, objective,
                 bannerUrl, startDate, startTime, endDate, endTime,
-                location, latitude, longitude, status || 'Planned', organizationId, createdBy
+                location, latitude, longitude, status || 'Planned', createdBy
             ]
         );
         return result.insertId;
@@ -28,11 +28,9 @@ class Project {
     static async findById(projectId) {
         const [rows] = await db.execute(
             `SELECT p.*,
-                    o.OrganizationName,
                     u.FullName as CreatedByName,
                     u2.FullName as UpdatedByName
              FROM projects p
-             LEFT JOIN organizations o ON p.OrganizationId = o.OrganizationId
              LEFT JOIN users u ON p.CreatedBy = u.UserId
              LEFT JOIN users u2 ON p.UpdatedBy = u2.UserId
              WHERE p.ProjectId = ? AND p.IsDeleted = FALSE`,
@@ -45,21 +43,14 @@ class Project {
     static async findAll(filters = {}) {
         let query = `
             SELECT p.*,
-                   o.OrganizationName,
                    u.FullName as CreatedByName,
                    (SELECT COUNT(*) FROM project_spends ps WHERE ps.ProjectId = p.ProjectId AND ps.IsDeleted = FALSE) as TotalSpends,
                    (SELECT COALESCE(SUM(Amount), 0) FROM project_spends ps WHERE ps.ProjectId = p.ProjectId AND ps.IsDeleted = FALSE) as TotalAmount
             FROM projects p
-            LEFT JOIN organizations o ON p.OrganizationId = o.OrganizationId
             LEFT JOIN users u ON p.CreatedBy = u.UserId
             WHERE p.IsDeleted = FALSE
         `;
         const params = [];
-
-        if (filters.organizationId) {
-            query += ' AND p.OrganizationId = ?';
-            params.push(filters.organizationId);
-        }
 
         if (filters.status) {
             query += ' AND p.Status = ?';
@@ -144,8 +135,8 @@ class Project {
     }
 
     // Get project statistics
-    static async getStats(organizationId = null) {
-        let query = `
+    static async getStats() {
+        const query = `
             SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN Status = 'Planned' THEN 1 ELSE 0 END) as planned,
@@ -154,14 +145,8 @@ class Project {
             FROM projects
             WHERE IsDeleted = FALSE
         `;
-        const params = [];
 
-        if (organizationId) {
-            query += ' AND OrganizationId = ?';
-            params.push(organizationId);
-        }
-
-        const [rows] = await db.execute(query, params);
+        const [rows] = await db.execute(query, []);
         return rows[0];
     }
 }

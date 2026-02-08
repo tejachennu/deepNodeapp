@@ -11,14 +11,12 @@ const pool = mysql.createPool({
     waitForConnections: config.db.waitForConnections,
     connectionLimit: config.db.connectionLimit,
     queueLimit: config.db.queueLimit,
-    // Connection keep-alive settings to prevent ECONNRESET
     enableKeepAlive: true,
-    keepAliveInitialDelay: 10000, // 10 seconds
-    // Handle connection timeouts
-    connectTimeout: 60000, // 60 seconds
-    // Enable multiple statements if needed
+    keepAliveInitialDelay: 10000,
+    connectTimeout: 60000,
     multipleStatements: false
 });
+
 
 // Test connection
 const testConnection = async () => {
@@ -33,10 +31,10 @@ const testConnection = async () => {
     }
 };
 
-// Execute query helper
+// Execute query helper - uses pool.query for better type coercion
 const query = async (sql, params = []) => {
     try {
-        const [results] = await pool.execute(sql, params);
+        const [results] = await pool.query(sql, params);
         return results;
     } catch (error) {
         console.error('Database query error:', error);
@@ -67,8 +65,9 @@ const transaction = async (callback) => {
 };
 
 // Execute function for direct pool access (for models using db.execute pattern)
+// Uses pool.query() which handles type coercion better than prepared statements
 const execute = async (sql, params = []) => {
-    return pool.execute(sql, params);
+    return pool.query(sql, params);
 };
 
 module.exports = {

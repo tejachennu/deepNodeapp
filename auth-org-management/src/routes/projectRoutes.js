@@ -85,8 +85,6 @@ const projectValidation = [
  *               status:
  *                 type: string
  *                 enum: [Planned, Ongoing, Completed]
- *               organizationId:
- *                 type: integer
  *     responses:
  *       201:
  *         description: Project created successfully
@@ -102,10 +100,6 @@ router.post('/', authenticate, projectValidation, projectController.createProjec
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: organizationId
- *         schema:
- *           type: integer
  *       - in: query
  *         name: status
  *         schema:
@@ -137,11 +131,6 @@ router.get('/', authenticate, projectController.getAllProjects);
  *     tags: [Projects]
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - in: query
- *         name: organizationId
- *         schema:
- *           type: integer
  *     responses:
  *       200:
  *         description: Project statistics
