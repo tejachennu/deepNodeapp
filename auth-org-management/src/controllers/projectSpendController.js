@@ -280,3 +280,73 @@ exports.uploadBillImage = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to upload bill image' });
     }
 };
+
+// Settle a spend (reimburse own money expense)
+exports.settleSpend = async (req, res) => {
+    try {
+        const spend = await ProjectSpend.findById(req.params.id);
+        if (!spend) {
+            return res.status(404).json({ success: false, message: 'Expense not found' });
+        }
+
+        if (!spend.PaidWithOwnMoney) {
+            return res.status(400).json({
+                success: false,
+                message: 'This expense was not paid with own money'
+            });
+        }
+
+        if (spend.IsSettled) {
+            return res.status(400).json({
+                success: false,
+                message: 'This expense has already been settled'
+            });
+        }
+
+        // Admin/SuperAdmin can settle any expense, or creator can settle their own
+        const isAdmin = req.user.RoleCode === 'SUPER_ADMIN' || req.user.RoleCode === 'ADMIN';
+        const isCreator = spend.CreatedBy === req.user.UserId;
+
+        if (!isAdmin && !isCreator) {
+            return res.status(403).json({
+                success: false,
+                message: 'You can only settle your own expenses'
+            });
+        }
+
+        await ProjectSpend.settle(req.params.id, req.user.UserId, {
+            settlementNotes: req.body.settlementNotes,
+            settlementAmount: req.body.settlementAmount || spend.Amount
+        });
+
+        const updatedSpend = await ProjectSpend.findById(req.params.id);
+
+        res.json({
+            success: true,
+            message: 'Expense settled successfully',
+            data: { spend: updatedSpend }
+        });
+    } catch (error) {
+        console.error('Settle spend error:', error);
+        res.status(500).json({ success: false, message: 'Failed to settle expense' });
+    }
+};
+
+// Get unsettled spends (own money expenses pending reimbursement)
+exports.getUnsettledSpends = async (req, res) => {
+    try {
+        const projectId = req.query.projectId || null;
+        const spends = await ProjectSpend.getUnsettled(projectId);
+
+        res.json({
+            success: true,
+            data: {
+                spends,
+                count: spends.length
+            }
+        });
+    } catch (error) {
+        console.error('Get unsettled spends error:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch unsettled expenses' });
+    }
+};

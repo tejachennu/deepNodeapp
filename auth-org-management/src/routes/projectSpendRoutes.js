@@ -126,6 +126,25 @@ router.get('/', authenticate, projectSpendController.getAllSpends);
 
 /**
  * @swagger
+ * /api/project-spends/unsettled:
+ *   get:
+ *     summary: Get all unsettled expenses (own money pending reimbursement)
+ *     tags: [Project Spends]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: projectId
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of unsettled expenses
+ */
+router.get('/unsettled', authenticate, projectSpendController.getUnsettledSpends);
+
+/**
+ * @swagger
  * /api/project-spends/project/{projectId}:
  *   get:
  *     summary: Get all expenses for a project with summary
@@ -305,5 +324,35 @@ router.delete('/:id', authenticate, param('id').isInt(), projectSpendController.
  *         description: Bill image uploaded successfully
  */
 router.post('/:id/bill', authenticate, param('id').isInt(), upload.single('bill'), projectSpendController.uploadBillImage);
+
+/**
+ * @swagger
+ * /api/project-spends/{id}/settle:
+ *   post:
+ *     summary: Settle an expense (mark as reimbursed)
+ *     tags: [Project Spends]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               settlementNotes:
+ *                 type: string
+ *               settlementAmount:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Expense settled successfully
+ */
+router.post('/:id/settle', authenticate, param('id').isInt(), projectSpendController.settleSpend);
 
 module.exports = router;

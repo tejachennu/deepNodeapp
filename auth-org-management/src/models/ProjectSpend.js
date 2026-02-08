@@ -5,19 +5,19 @@ class ProjectSpend {
     static async create(spendData) {
         const {
             projectId, expenseName, expenseDescription, amount,
-            paidWithTrustAmount, paymentMode, paidTo, billImageUrl,
+            paidWithTrustAmount, paidWithOwnMoney, paymentMode, paidTo, billImageUrl,
             billDate, spentDate, createdBy
         } = spendData;
 
         const [result] = await db.execute(
             `INSERT INTO project_spends (
                 ProjectId, ExpenseName, ExpenseDescription, Amount,
-                PaidWithTrustAmount, PaymentMode, PaidTo, BillImageUrl,
+                PaidWithTrustAmount, PaidWithOwnMoney, PaymentMode, PaidTo, BillImageUrl,
                 BillDate, SpentDate, CreatedBy
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 projectId, expenseName, expenseDescription, amount,
-                paidWithTrustAmount || false, paymentMode || 'Cash', paidTo, billImageUrl,
+                paidWithTrustAmount || false, paidWithOwnMoney || false, paymentMode || 'Cash', paidTo, billImageUrl,
                 billDate, spentDate, createdBy
             ]
         );
@@ -30,11 +30,13 @@ class ProjectSpend {
             `SELECT ps.*,
                     p.ProjectName,
                     u.FullName as CreatedByName,
-                    u2.FullName as ApprovedByName
+                    u2.FullName as ApprovedByName,
+                    u3.FullName as SettledByName
              FROM project_spends ps
              LEFT JOIN projects p ON ps.ProjectId = p.ProjectId
              LEFT JOIN users u ON ps.CreatedBy = u.UserId
              LEFT JOIN users u2 ON ps.ApprovedBy = u2.UserId
+             LEFT JOIN users u3 ON ps.SettledBy = u3.UserId
              WHERE ps.ProjectSpendId = ? AND ps.IsDeleted = FALSE`,
             [spendId]
         );
@@ -47,11 +49,13 @@ class ProjectSpend {
             SELECT ps.*,
                    p.ProjectName,
                    u.FullName as CreatedByName,
-                   u2.FullName as ApprovedByName
+                   u2.FullName as ApprovedByName,
+                   u3.FullName as SettledByName
             FROM project_spends ps
             LEFT JOIN projects p ON ps.ProjectId = p.ProjectId
             LEFT JOIN users u ON ps.CreatedBy = u.UserId
             LEFT JOIN users u2 ON ps.ApprovedBy = u2.UserId
+            LEFT JOIN users u3 ON ps.SettledBy = u3.UserId
             WHERE ps.ProjectId = ? AND ps.IsDeleted = FALSE
         `;
         const params = [projectId];
@@ -226,6 +230,45 @@ class ProjectSpend {
              GROUP BY PaymentMode`,
             [projectId]
         );
+        return rows;
+    }
+
+    // Settle a spend (mark as reimbursed)
+    static async settle(spendId, settledBy, settlementData = {}) {
+        const { settlementNotes, settlementAmount } = settlementData;
+        const [result] = await db.execute(
+            `UPDATE project_spends 
+             SET IsSettled = TRUE, SettledBy = ?, SettledDate = NOW(), 
+                 SettlementNotes = ?, SettlementAmount = ?, UpdatedBy = ?
+             WHERE ProjectSpendId = ? AND IsDeleted = FALSE`,
+            [settledBy, settlementNotes || null, settlementAmount || null, settledBy, spendId]
+        );
+        return result.affectedRows > 0;
+    }
+
+    // Get unsettled spends (own money expenses that need reimbursement)
+    static async getUnsettled(projectId = null) {
+        let query = `
+            SELECT ps.*,
+                   p.ProjectName,
+                   u.FullName as CreatedByName
+            FROM project_spends ps
+            LEFT JOIN projects p ON ps.ProjectId = p.ProjectId
+            LEFT JOIN users u ON ps.CreatedBy = u.UserId
+            WHERE ps.IsDeleted = FALSE 
+              AND ps.PaidWithOwnMoney = TRUE 
+              AND ps.IsSettled = FALSE
+        `;
+        const params = [];
+
+        if (projectId) {
+            query += ' AND ps.ProjectId = ?';
+            params.push(projectId);
+        }
+
+        query += ' ORDER BY ps.SpentDate DESC';
+
+        const [rows] = await db.query(query, params);
         return rows;
     }
 }
