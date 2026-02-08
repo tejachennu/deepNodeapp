@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const passport = require('./config/passport');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const getSwaggerSpec = require('./config/swagger');
 
 // Import middleware
 const apiLogger = require('./middleware/apiLogger');
@@ -25,8 +25,26 @@ const apiLogRoutes = require('./routes/apiLogRoutes');
 const app = express();
 
 // Middleware
+// CORS configuration - allows mobile apps and multiple origins
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: function (origin, callback) {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) return callback(null, true);
+
+        // List of allowed origins
+        const allowedOrigins = [
+            'http://localhost:5173',
+            'http://localhost:3000',
+            'http://localhost:19006', // Expo web
+            process.env.FRONTEND_URL
+        ].filter(Boolean);
+
+        if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 app.use(express.json());
@@ -42,7 +60,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(passport.initialize());
 
 // Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(getSwaggerSpec(), {
     explorer: true,
     customCss: '.swagger-ui .topbar { display: none }',
     customSiteTitle: 'Auth & Org Management API'
@@ -51,7 +69,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // Swagger JSON endpoint
 app.get('/api-docs.json', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
-    res.send(swaggerSpec);
+    res.send(getSwaggerSpec());
 });
 
 // Health check endpoint

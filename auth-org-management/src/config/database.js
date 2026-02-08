@@ -1,7 +1,7 @@
 const mysql = require('mysql2/promise');
 const config = require('./index');
 
-// Create connection pool
+// Create connection pool with reconnection handling
 const pool = mysql.createPool({
     host: config.db.host,
     user: config.db.user,
@@ -10,7 +10,14 @@ const pool = mysql.createPool({
     port: config.db.port,
     waitForConnections: config.db.waitForConnections,
     connectionLimit: config.db.connectionLimit,
-    queueLimit: config.db.queueLimit
+    queueLimit: config.db.queueLimit,
+    // Connection keep-alive settings to prevent ECONNRESET
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000, // 10 seconds
+    // Handle connection timeouts
+    connectTimeout: 60000, // 60 seconds
+    // Enable multiple statements if needed
+    multipleStatements: false
 });
 
 // Test connection
