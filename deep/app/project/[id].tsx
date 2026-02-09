@@ -107,7 +107,13 @@ export default function ProjectDetailScreen() {
         paymentMode: 'Cash',
         spentDate: new Date(),
         notes: '',
+        paidWithOwnMoney: false,
     });
+
+    // Settlement State
+    const [settleModal, setSettleModal] = useState(false);
+    const [settleForm, setSettleForm] = useState({ notes: '', amount: '' });
+    const [selectedSpendId, setSelectedSpendId] = useState<number | null>(null);
 
     const canEdit = isAdmin(user?.roleCode || '');
 
@@ -287,16 +293,42 @@ export default function ProjectDetailScreen() {
                 paymentMode: spendForm.paymentMode,
                 spentDate: spendForm.spentDate.toISOString().split('T')[0],
                 notes: spendForm.notes,
+                paidWithOwnMoney: spendForm.paidWithOwnMoney,
             });
             Alert.alert('Success', 'Expense added successfully');
             setAddSpendModal(false);
             setSpendForm({
                 expenseName: '', expenseType: 'Material', amount: '', vendorName: '',
                 vendorPhone: '', paymentMode: 'Cash', spentDate: new Date(), notes: '',
+                paidWithOwnMoney: false,
             });
             fetchData();
         } catch (error) {
             Alert.alert('Error', 'Failed to add expense');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleSettleSpend = (spend: ProjectSpend) => {
+        setSelectedSpendId(spend.ProjectSpendId);
+        setSettleForm({ notes: '', amount: spend.Amount.toString() });
+        setSettleModal(true);
+    };
+
+    const confirmSettleSpend = async () => {
+        if (!selectedSpendId) return;
+        setSaving(true);
+        try {
+            await projectService.settleSpend(selectedSpendId, {
+                settlementNotes: settleForm.notes,
+                settlementAmount: parseFloat(settleForm.amount),
+            });
+            Alert.alert('Success', 'Expense settled successfully');
+            setSettleModal(false);
+            fetchData();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to settle expense');
         } finally {
             setSaving(false);
         }
@@ -630,7 +662,7 @@ export default function ProjectDetailScreen() {
                                             <Text style={[styles.listCardSubtitle, { color: colors.textSecondary }]} numberOfLines={2}>{sponsor.Purpose}</Text>
                                         )}
                                         {sponsor.Amount && sponsor.Amount > 0 && (
-                                            <Text style={[styles.sponsorAmount, { color: colors.primary }]}>₹{(sponsor.Amount / 1000).toFixed(1)}K</Text>
+                                            <Text style={[styles.sponsorAmount, { color: colors.primary }]}>₹{sponsor.Amount}</Text>
                                         )}
                                     </View>
                                 ))
@@ -653,17 +685,50 @@ export default function ProjectDetailScreen() {
                                 </View>
                             ) : (
                                 spends.map((spend) => (
-                                    <View key={spend.SpendId} style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                                    <View key={spend.ProjectSpendId} style={[styles.listCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                                         <View style={styles.listCardHeader}>
                                             <Text style={[styles.listCardTitle, { color: colors.text }]}>{spend.ExpenseName || spend.SpendName}</Text>
                                             <View style={[styles.miniBadge, { backgroundColor: colors.warning + '20' }]}>
                                                 <Text style={[styles.miniBadgeText, { color: colors.warning }]}>{spend.ExpenseType || spend.SpendType}</Text>
                                             </View>
                                         </View>
+
+                                        {/* Settlement Status Badges */}
+                                        {spend.PaidWithOwnMoney && (
+                                            <View style={styles.badgeRow}>
+                                                <View style={[styles.miniBadge, { backgroundColor: colors.info + '20', marginRight: 4 }]}>
+                                                    <Text style={[styles.miniBadgeText, { color: colors.info }]}>Own Money</Text>
+                                                </View>
+                                                {spend.IsSettled ? (
+                                                    <View style={[styles.miniBadge, { backgroundColor: colors.success + '20' }]}>
+                                                        <Text style={[styles.miniBadgeText, { color: colors.success }]}>Settled</Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={[styles.miniBadge, { backgroundColor: colors.error + '20' }]}>
+                                                        <Text style={[styles.miniBadgeText, { color: colors.error }]}>Unsettled</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )}
+
+                                        {spend.CreatedByName && (
+                                            <Text style={[styles.listCardSubtitle, { color: colors.textMuted }]}>Added by: {spend.CreatedByName}</Text>
+                                        )}
                                         {spend.VendorName && (
                                             <Text style={[styles.listCardSubtitle, { color: colors.textMuted }]}>Vendor: {spend.VendorName}</Text>
                                         )}
-                                        <Text style={[styles.spendAmount, { color: colors.error }]}>-₹{(spend.Amount / 1000).toFixed(1)}K</Text>
+
+                                        <Text style={[styles.spendAmount, { color: colors.primary }]}>₹{spend.Amount}</Text>
+
+                                        {/* Settle Button */}
+                                        {!spend.IsSettled && spend.PaidWithOwnMoney && (canEdit || user?.userId === spend.CreatedBy) && (
+                                            <TouchableOpacity
+                                                style={[styles.settleButton, { backgroundColor: colors.primary + '15' }]}
+                                                onPress={() => handleSettleSpend(spend)}
+                                            >
+                                                <Text style={[styles.settleButtonText, { color: colors.primary }]}>Settle</Text>
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
                                 ))
                             )}

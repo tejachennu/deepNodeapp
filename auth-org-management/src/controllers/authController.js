@@ -4,6 +4,8 @@ const { generateToken } = require('../middleware/auth');
 const { createOTP, verifyOTP } = require('../services/otpService');
 const { sendOTPEmail, sendWelcomeEmail } = require('../services/emailService');
 const config = require('../config');
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(config.google.clientId);
 
 // Signup with email/password
 const signup = async (req, res) => {
@@ -268,6 +270,124 @@ const login = async (req, res) => {
     }
 };
 
+// Google Login with ID Token (for Mobile/Client-side flow)
+const googleLogin = async (req, res) => {
+    try {
+        const { token } = req.body;
+
+        if (!token) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token is required.'
+            });
+        }
+
+        // Verify Google Token
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: [
+                config.google.clientId,
+                process.env.GOOGLE_ANDROID_CLIENT_ID,
+                process.env.GOOGLE_IOS_CLIENT_ID,
+                process.env.GOOGLE_WEB_CLIENT_ID
+            ]
+        });
+        const payload = ticket.getPayload();
+        const { email, name, sub: googleId, picture } = payload;
+
+        // Check if user exists
+        let user = await queryOne(
+            'SELECT * FROM users WHERE GoogleId = ?',
+            [googleId]
+        );
+
+        if (!user) {
+            // Check by email
+            user = await queryOne(
+                'SELECT * FROM users WHERE Email = ?',
+                [email]
+            );
+
+            if (user) {
+                // Link Google account
+                await query(
+                    'UPDATE users SET GoogleId = ?, IsEmailVerified = TRUE, Status = ? WHERE UserId = ?',
+                    [googleId, 'Active', user.UserId]
+                );
+                user.GoogleId = googleId;
+                user.IsEmailVerified = true;
+            } else {
+                // Create new user
+                const defaultRole = await queryOne(
+                    "SELECT RoleId FROM roles WHERE RoleCode = 'STAFF' AND IsActive = TRUE"
+                );
+
+                const result = await query(
+                    `INSERT INTO users (FullName, Email, GoogleId, RoleId, Status, IsEmailVerified, CreatedDate) 
+                     VALUES (?, ?, ?, ?, 'Active', TRUE, NOW())`,
+                    [name, email, googleId, defaultRole?.RoleId || null]
+                );
+
+                user = await queryOne(
+                    'SELECT * FROM users WHERE UserId = ?',
+                    [result.insertId]
+                );
+            }
+        }
+
+        // Check if blocked
+        if (user.Status === 'Blocked') {
+            return res.status(403).json({
+                success: false,
+                message: 'Your account has been blocked.'
+            });
+        }
+
+        // Update last login
+        await query(
+            'UPDATE users SET LastLogin = NOW() WHERE UserId = ?',
+            [user.UserId]
+        );
+
+        // Get full user details with role
+        const fullUser = await queryOne(
+            `SELECT u.*, r.RoleName, r.RoleCode 
+             FROM users u 
+             LEFT JOIN roles r ON u.RoleId = r.RoleId 
+             WHERE u.UserId = ?`,
+            [user.UserId]
+        );
+
+        // Generate token
+        const jwtToken = generateToken(fullUser);
+
+        res.json({
+            success: true,
+            message: 'Google login successful.',
+            data: {
+                token: jwtToken,
+                user: {
+                    userId: fullUser.UserId,
+                    email: fullUser.Email,
+                    fullName: fullUser.FullName,
+                    username: fullUser.Username,
+                    role: fullUser.RoleName,
+                    roleCode: fullUser.RoleCode,
+                    organizationId: fullUser.OrganizationId,
+                    picture: picture
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Google login error:', error);
+        res.status(401).json({
+            success: false,
+            message: 'Invalid Google token.'
+        });
+    }
+};
+
 // Google OAuth callback handler
 const googleCallback = async (req, res) => {
     try {
@@ -401,6 +521,7 @@ module.exports = {
     verifyEmailOTP,
     resendOTP,
     login,
+    googleLogin,
     googleCallback,
     getProfile,
     forgotPassword,

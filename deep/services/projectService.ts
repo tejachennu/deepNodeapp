@@ -74,7 +74,7 @@ export interface Sponsor {
 }
 
 export interface ProjectSpend {
-    SpendId: number;
+    ProjectSpendId: number;
     ProjectId: number;
     SpendName?: string;
     ExpenseName?: string;
@@ -92,6 +92,15 @@ export interface ProjectSpend {
     Notes?: string;
     ApprovedBy?: number;
     ApprovalDate?: string;
+    CreatedBy?: number;
+    CreatedByName?: string;
+    PaidWithOwnMoney?: boolean;
+    IsSettled?: boolean;
+    SettledBy?: number;
+    SettledByName?: string;
+    SettledDate?: string;
+    SettlementNotes?: string;
+    SettlementAmount?: number;
 }
 
 // Project Service
@@ -236,6 +245,7 @@ export const projectService = {
         billDate?: string;
         spentDate?: string;
         notes?: string;
+        paidWithOwnMoney?: boolean;
     }): Promise<ProjectSpend> {
         const response = await api.post('/project-spends', data);
         return response.data.data?.spend;
@@ -252,5 +262,14 @@ export const projectService = {
 
     async approveSpend(id: number): Promise<void> {
         await api.post(`/project-spends/${id}/approve`);
+    },
+
+    async settleSpend(id: number, data: { settlementNotes?: string; settlementAmount?: number }): Promise<void> {
+        await api.post(`/project-spends/${id}/settle`, data);
+    },
+
+    async getUnsettledSpends(projectId?: number): Promise<ProjectSpend[]> {
+        const response = await api.get('/project-spends/unsettled', { params: { projectId } });
+        return response.data.data?.spends || [];
     },
 };

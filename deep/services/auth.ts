@@ -60,6 +60,23 @@ export const authService = {
         return response.data;
     },
 
+    // Google Login
+    async googleLogin(token: string): Promise<AuthResponse> {
+        console.log('🔐 GOOGLE LOGIN DEBUG:');
+        try {
+            const response = await api.post('/auth/google-login', { token });
+            console.log('📥 Google Login Response:', JSON.stringify(response.data, null, 2));
+
+            if (response.data.success && response.data.data?.token) {
+                await this.storeAuthData(response.data.data.token, response.data.data.user);
+            }
+            return response.data;
+        } catch (error: any) {
+            console.log('❌ GOOGLE LOGIN ERROR:', error);
+            throw error;
+        }
+    },
+
     // Login
     async login(credentials: LoginCredentials): Promise<AuthResponse> {
         console.log('🔐 LOGIN DEBUG:');

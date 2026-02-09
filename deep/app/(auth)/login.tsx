@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -11,20 +11,56 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Colors } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen() {
     const colorScheme = useColorScheme();
     const colors = Colors[colorScheme ?? 'light'];
-    const { login } = useAuth();
+    const { login, googleLogin } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+    // Google Auth Request
+    const [request, response, promptAsync] = Google.useAuthRequest({
+        androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+        iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+    });
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { authentication } = response;
+            if (authentication?.idToken) {
+                handleGoogleSignIn(authentication.idToken);
+            }
+        }
+    }, [response]);
+
+    const handleGoogleSignIn = async (token: string) => {
+        setLoading(true);
+        try {
+            const result = await googleLogin(token);
+            if (result.success) {
+                router.replace('/(tabs)');
+            } else {
+                Alert.alert('Google Login Failed', result.message);
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Something went wrong during Google login.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const validate = () => {
         const newErrors: { email?: string; password?: string } = {};
@@ -56,8 +92,7 @@ export default function LoginScreen() {
     };
 
     const handleGoogleLogin = () => {
-        // TODO: Implement Google OAuth
-        Alert.alert('Coming Soon', 'Google login will be available soon!');
+        promptAsync();
     };
 
     return (
@@ -132,6 +167,7 @@ export default function LoginScreen() {
                         title="Continue with Google"
                         variant="outline"
                         onPress={handleGoogleLogin}
+                        disabled={!request}
                         fullWidth
                         icon={<Ionicons name="logo-google" size={20} color={colors.primary} />}
                     />

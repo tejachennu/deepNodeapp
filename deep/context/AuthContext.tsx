@@ -7,6 +7,7 @@ interface AuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<{ success: boolean; message: string; requiresVerification?: boolean }>;
+    googleLogin: (token: string) => Promise<{ success: boolean; message: string }>;
     signup: (data: { email: string; password: string; fullName: string; mobileNumber?: string }) => Promise<{ success: boolean; message: string }>;
     verifyOTP: (email: string, otp: string) => Promise<{ success: boolean; message: string }>;
     logout: () => Promise<void>;
@@ -65,6 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const googleLogin = async (token: string) => {
+        try {
+            const response = await authService.googleLogin(token);
+            if (response.success && response.data) {
+                setToken(response.data.token);
+                setUser(response.data.user);
+            }
+            return {
+                success: response.success,
+                message: response.message
+            };
+        } catch (error: any) {
+            return {
+                success: false,
+                message: error.response?.data?.message || 'Google login failed'
+            };
+        }
+    };
+
     const signup = async (data: { email: string; password: string; fullName: string; mobileNumber?: string }) => {
         try {
             const response = await authService.signup(data);
@@ -108,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isLoading,
                 isAuthenticated: !!token && !!user,
                 login,
+                googleLogin,
                 signup,
                 verifyOTP,
                 logout,

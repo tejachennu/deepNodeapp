@@ -140,6 +140,43 @@ router.post('/login', loginValidation, authController.login);
 
 /**
  * @swagger
+ * /api/auth/google-login:
+ *   post:
+ *     summary: Login with Google ID Token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Google ID Token
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Invalid token
+ */
+router.post('/google-login', authController.googleLogin);
+
+/**
+ * @swagger
  * /api/auth/google:
  *   get:
  *     summary: Initiate Google OAuth login
